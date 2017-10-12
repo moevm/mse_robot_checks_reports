@@ -9,3 +9,9 @@ class DatabaseDAO:
         self.client = MongoClient()
         self.db = self.client.verificated_docs
         self.collection = self.db.docs
+
+    def saveDoc(self, name, discipline, file):
+        skelet = {}
+        skelet.update({"name":name})
+        skelet.update({"discipline":discipline})
+        skelet.update({"file":name})
