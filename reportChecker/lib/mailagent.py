@@ -68,15 +68,20 @@ class MailAgent:
     def __init__(self):
         pass
 
-    def getmail(self):
+    def connect_imap(self):
         try:
             rv, data = M.login(YA_USER, YA_PASSWORD)
         except imaplib.IMAP4.error:
             print("LOGIN FAILED!!! ")
             sys.exit(1)
 
-        print(rv, data)
+    def connect_smtp(self):
+        s.ehlo()
+        s.starttls()
+        s.ehlo()
+        s.login(user_name, user_passwd)
 
+    def getmail(self):
         rv, mailboxes = M.list()
         if rv == 'OK':
             print("Mailboxes:")
@@ -95,16 +100,15 @@ class MailAgent:
         msg['Subject'] = subj
         msg['From'] = me
         msg['To'] = reciever
-
-        # отправка
-        s.ehlo()
-        s.starttls()
-        s.ehlo()
-        s.login(user_name, user_passwd)
+        self.connect_smtp()
         s.sendmail(me, reciever, msg.as_string())
         s.quit()
         return True
 
 
-M.close()
+k = MailAgent();
+k.connect_imap()
+k.getmail()
+k.sendmail("zhuravlevra@inbox.ru", "test", "test")
+
 M.logout()
