@@ -2,13 +2,13 @@
 from imaplib import IMAP4_SSL
 import sys
 import imaplib
-import getpass
 import email
 import email.header
 import datetime
 import os
 import smtplib
 from email.mime.text import MIMEText
+from email.header import decode_header
 
 YA_HOST = "imap.yandex.ru"
 YA_SMTP = "smtp.yandex.ru"
@@ -29,6 +29,9 @@ me = "romzhuravlev@yandex.ru"
 s = smtplib.SMTP(server, port)
 M = imaplib.IMAP4_SSL('imap.yandex.ru')
 
+detach_dir = '.'
+if 'attachments' not in os.listdir(detach_dir):
+    os.mkdir('attachments')
 
 def process_mailbox(M):
     """
@@ -105,10 +108,39 @@ class MailAgent:
         s.quit()
         return True
 
+    def getAttachments(self):
+        rv, data = M.search(None, "ALL")
+        for msgId in data[0].split():
+            typ, messageParts = M.fetch(msgId, '(RFC822)')
+            if typ != 'OK':
+                print('Error fetching mail.')
+                raise
+
+            emailBody = messageParts[0][1]
+            mail = email.message_from_bytes(emailBody)
+            for part in mail.walk():
+                if part.get_content_maintype() == 'multipart':
+                    # print part.as_string()
+                    continue
+                if part.get('Content-Disposition') is None:
+                    # print part.as_string()
+                    continue
+                fileName = part.get_filename()
+                fileName = str(decode_header(fileName)[0][0])
+                fileName = fileName[2:-1]
+                if bool(fileName) and isinstance(fileName, str):
+                    filePath = os.path.join(detach_dir, 'attachments', fileName)
+                    filePath = str(decode_header(filePath)[0][0])
+                    print(filePath)
+                    if not os.path.isfile(filePath):
+                        fp = open(filePath, 'wb')
+                        fp.write(part.get_payload(decode=True))
+                        fp.close()
+
 
 k = MailAgent();
 k.connect_imap()
 k.getmail()
-k.sendmail("zhuravlevra@inbox.ru", "test", "test")
+k.getAttachments()
 
 M.logout()
