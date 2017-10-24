@@ -1,4 +1,5 @@
 from pymongo import MongoClient
+import gridfs
 
 class DatabaseDAO:
     client = 0
@@ -14,4 +15,9 @@ class DatabaseDAO:
         skelet = {}
         skelet.update({"name":name})
         skelet.update({"discipline":discipline})
-        skelet.update({"file":name})
+
+        fs = gridfs.GridFS(self.db, collection="arch")
+        fs.put(file)
+
+
+
