@@ -1,4 +1,5 @@
 from pymongo import MongoClient
+from bson import ObjectId
 import gridfs
 
 class DatabaseDAO:
@@ -17,7 +18,8 @@ class DatabaseDAO:
         skelet.update({"discipline":discipline})
 
         fs = gridfs.GridFS(self.db, collection="arch")
-        fs.put(file)
+        fileId = fs.put(file)
+        skelet.update({"fileId":fileId})
         self.collection.insert_one(skelet)
 
 
