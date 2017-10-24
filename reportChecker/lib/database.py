@@ -18,6 +18,7 @@ class DatabaseDAO:
 
         fs = gridfs.GridFS(self.db, collection="arch")
         fs.put(file)
+        self.collection.insert_one(skelet)
 
 
 
