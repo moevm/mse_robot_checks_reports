@@ -1,3 +1,6 @@
+#! /usr/bin/env python
+# -*- coding: utf-8 -*-
+
 """Work with mail"""
 from imaplib import IMAP4_SSL
 import sys
@@ -9,6 +12,15 @@ import os
 import smtplib
 from email.mime.text import MIMEText
 from email.header import decode_header
+import re
+
+# Для декодирования аттачмента
+quopri_entry = re.compile(r'=\?[\w-]+\?[QB]\?[^?]+?\?=')
+
+def decode_multiple(encoded, _pattern=quopri_entry):
+    fixed = '\r\n'.join(_pattern.findall(encoded))
+    output = [b.decode(c) for b, c in decode_header(fixed)]
+    return ''.join(output)
 
 YA_HOST = "imap.yandex.ru"
 YA_SMTP = "smtp.yandex.ru"
@@ -16,7 +28,7 @@ YA_PORT = 993
 YA_SMTP_PORT = 25
 YA_USER = "romzhuravlev@yandex.ru"
 YA_PASSWORD = "Qpwoei2209"
-detach_dir = 'C:\\Users\\Roman Zhuravlev\\Downloads'
+detach_dir = os.getcwd()
 
 # SMTP-сервер
 server = "smtp.yandex.ru"
@@ -110,6 +122,7 @@ class MailAgent:
 
     def getAttachments(self):
         rv, data = M.search(None, "ALL")
+        attachList = []
         for msgId in data[0].split():
             typ, messageParts = M.fetch(msgId, '(RFC822)')
             if typ != 'OK':
@@ -125,22 +138,22 @@ class MailAgent:
                 if part.get('Content-Disposition') is None:
                     # print part.as_string()
                     continue
+
+                # декодированиe под линуксом
                 fileName = part.get_filename()
-                fileName = str(decode_header(fileName)[0][0])
-                fileName = fileName[2:-1]
+                fileName = decode_multiple(fileName)
+
+                # fileName = str(decode_header(fileName)[0][0])
+                # fileName = fileName[2:-1] 
+
                 if bool(fileName) and isinstance(fileName, str):
                     filePath = os.path.join(detach_dir, 'attachments', fileName)
                     filePath = str(decode_header(filePath)[0][0])
+                    filePath.encode('utf-8')
                     print(filePath)
+                    attachList.append(filePath)
                     if not os.path.isfile(filePath):
                         fp = open(filePath, 'wb')
                         fp.write(part.get_payload(decode=True))
                         fp.close()
-
-
-k = MailAgent();
-k.connect_imap()
-k.getmail()
-k.getAttachments()
-
-M.logout()
+        return attachList
