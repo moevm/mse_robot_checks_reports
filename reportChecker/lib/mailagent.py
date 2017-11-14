@@ -33,44 +33,49 @@ detach_dir = '.'
 if 'attachments' not in os.listdir(detach_dir):
     os.mkdir('attachments')
 
-def process_mailbox(M):
-    """
-    Do something with emails messages in the folder.
-    For the sake of this example, print some headers.
-    """
+#парсит адрес отправителя (отделяет сам адрес от строки где адрес и имя, так его возвращает header)
+def parseFrom(sender):
+    correctEmail =''
+    if(type(sender) is str):
+       for i in range(0, sender.__len__()):
+           if sender[i] != '<':
+               continue
+           else:
+               for j in range(i+1, sender.__len__()-1):
+                   correctEmail += sender[j]
+    return correctEmail
 
-    rv, data = M.search(None, "ALL")
-    if rv != 'OK':
-        print("No messages found!")
-        return
 
-    for num in data[0].split():
-        rv, data = M.fetch(num, '(RFC822)')
-        if rv != 'OK':
-            print("ERROR getting message", num)
-            return
+#класс предмета листа класса MailAgent, поля: УИ письма, отправитель, вложение соответсвенно
+class MailItem:
+    email_id = ''
+    email_sender = ''
+    email_attachment = ''
 
-        msg = email.message_from_bytes(data[0][1])
-        hdr = email.header.make_header(email.header.decode_header(msg['Subject']))
-        frm = email.header.make_header(email.header.decode_header(msg['From']))
-        subject = str(hdr)
-        print('Message %s: %s' % (num, subject))
-        print('Raw Date:', msg['Date'])
-        print('From:', frm)
-        # Now convert to local date-time
-        date_tuple = email.utils.parsedate_tz(msg['Date'])
-        if date_tuple:
-            local_date = datetime.datetime.fromtimestamp(
-                email.utils.mktime_tz(date_tuple))
-            print ("Local Date:", \
-                local_date.strftime("%a, %d %b %Y %H:%M:%S"))
+    def __init__(self, id, email, attach):
+        self.email_id =  id
+        self.email_sender = parseFrom(email)
+        self.email_attachment = attach
+        pass
+
+    def getID(self):
+        return self.email_id
+
+    def getSender(self):
+        return self.email_sender
+
+    def getAttachment(self):
+        return self.email_attachment
 
 
 class MailAgent:
     """Work with mail"""
+    __list = []
+
     def __init__(self):
         pass
 
+    #подключение по imap
     def connect_imap(self):
         try:
             rv, data = M.login(YA_USER, YA_PASSWORD)
@@ -78,38 +83,36 @@ class MailAgent:
             print("LOGIN FAILED!!! ")
             sys.exit(1)
 
+    # подключение по smtp
     def connect_smtp(self):
         s.ehlo()
         s.starttls()
         s.ehlo()
         s.login(user_name, user_passwd)
 
-    def getmail(self):
-        rv, mailboxes = M.list()
-        if rv == 'OK':
-            print("Mailboxes:")
-            print(mailboxes)
-
-        rv, data = M.select()
-        if rv == 'OK':
-            print("Processing mailbox...\n")
-            process_mailbox(M)
-
-        else:
-            print("ERROR: Unable to open mailbox ", rv)
-
-    def sendmail(self, reciever, text, subj):
+    #отправить письмо по адресу reciever c текстом text и темой письма subj (требуется предварительный вызов ф-ии connect_smtp())
+    def sendmail(self, reciever, text = 'Wrong report', subj = 'From moevm (report error)'):
         msg = MIMEText(text, "", "utf-8")
         msg['Subject'] = subj
         msg['From'] = me
         msg['To'] = reciever
-        self.connect_smtp()
+
         s.sendmail(me, reciever, msg.as_string())
-        s.quit()
         return True
 
-    def getAttachments(self):
+    #получает вложения ВСЕХ писем (можно изменить на входящие изменив ALL на INBOX)
+    #и заносит вложения в __list класса MailAgent
+    def get_attachments(self):
+        rv, mailboxes = M.list()
+        if rv == 'OK':
+            print("List loaded.\n")
+        rv, data = M.select()
+        if rv == 'OK':
+            print("Mailbox selected.\n")
+
         rv, data = M.search(None, "ALL")
+        attachMass = []
+        filePath =''
         for msgId in data[0].split():
             typ, messageParts = M.fetch(msgId, '(RFC822)')
             if typ != 'OK':
@@ -118,6 +121,7 @@ class MailAgent:
 
             emailBody = messageParts[0][1]
             mail = email.message_from_bytes(emailBody)
+            frm = email.header.make_header(email.header.decode_header(mail['From']))
             for part in mail.walk():
                 if part.get_content_maintype() == 'multipart':
                     # print part.as_string()
@@ -128,19 +132,51 @@ class MailAgent:
                 fileName = part.get_filename()
                 fileName = str(decode_header(fileName)[0][0])
                 fileName = fileName[2:-1]
-                if bool(fileName) and isinstance(fileName, str):
+                if bool(fileName) and type(fileName) is str:
                     filePath = os.path.join(detach_dir, 'attachments', fileName)
                     filePath = str(decode_header(filePath)[0][0])
-                    print(filePath)
                     if not os.path.isfile(filePath):
                         fp = open(filePath, 'wb')
                         fp.write(part.get_payload(decode=True))
                         fp.close()
+            item = MailItem(str(msgId), str(frm), filePath)
+            self.append_to_list(item)
 
+    #добавляет в лист
+    def append_to_list(self, item):
+        self.__list.append(item)
 
-k = MailAgent();
+    def get_list(self):
+        return self.__list
+    #ниже id - это идентификатор письма ( формат : b'{номер письма}')
+    def get_sender_by_id(self, id):
+        for it in self.__list:
+            if it.getID() == id:
+                return it.getSender()
+
+    def get_attachment_by_id(self, id):
+        for it in self.__list:
+            if it.getID() == id:
+                return it.getAttachment()
+    #ответить на письмо с идентификатором id
+    def answer_to_id_email(self, id, text, subj):
+        for it in self.__list:
+            if it.getID() == id:
+                self.sendmail(it.getSender(), text, subj)
+
+#выполняемый код
+k = MailAgent()
 k.connect_imap()
-k.getmail()
-k.getAttachments()
+k.connect_smtp()
+#k.getmail()
+k.get_attachments()
+print("TEST AREA!!!!")
+
+t = k.get_attachment_by_id("b'3'")
+print(t)
+
+k.answer_to_id_email("b'3'", "LOOOOOOOOOOOOL", "TEST1")
+k.answer_to_id_email("b'3'", "LOOOOOOOOOOOOL", "TEST2")
+k.answer_to_id_email("b'3'", "LOOOOOOOOOOOOL", "TEST3")
 
 M.logout()
