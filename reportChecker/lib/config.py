@@ -1,3 +1,5 @@
+import json
+
 class ConfigReader:
     path = 0
 
@@ -13,3 +15,9 @@ class ConfigReader:
         for element in string_array:
             result_string += element
         return result_string
+
+# config = ConfigReader("../resources/config.json")
+# test_string = config.read_configs();
+# print(test_string)
+# testObj = json.loads(test_string)
+# print(testObj.get("disciplines")[0].get("name"))

@@ -1,3 +1,5 @@
+
+
 class Subject:
     __name=""
     __numCourseWorks=0

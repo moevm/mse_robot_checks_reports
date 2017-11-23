@@ -1,3 +1,6 @@
+#! /usr/bin/env python
+# -*- coding: utf-8 -*-
+
 """Work with mail"""
 from imaplib import IMAP4_SSL
 import sys
@@ -16,7 +19,7 @@ YA_PORT = 993
 YA_SMTP_PORT = 25
 YA_USER = "romzhuravlev@yandex.ru"
 YA_PASSWORD = "Qpwoei2209"
-detach_dir = 'C:\\Users\\Roman Zhuravlev\\Downloads'
+detach_dir = os.getcwd()
 
 # SMTP-сервер
 server = "smtp.yandex.ru"
@@ -29,9 +32,18 @@ me = "romzhuravlev@yandex.ru"
 s = smtplib.SMTP(server, port)
 M = imaplib.IMAP4_SSL('imap.yandex.ru')
 
-detach_dir = '.'
 if 'attachments' not in os.listdir(detach_dir):
     os.mkdir('attachments')
+
+import re
+
+# Для декодирования аттачмента
+quopri_entry = re.compile(r'=\?[\w-]+\?[QB]\?[^?]+?\?=')
+
+def decode_multiple(encoded, _pattern=quopri_entry):
+    fixed = '\r\n'.join(_pattern.findall(encoded))
+    output = [b.decode(c) for b, c in decode_header(fixed)]
+    return ''.join(output)
 
 #парсит адрес отправителя (отделяет сам адрес от строки где адрес и имя, так его возвращает header)
 def parseFrom(sender):
@@ -130,15 +142,19 @@ class MailAgent:
                     # print part.as_string()
                     continue
                 fileName = part.get_filename()
-                fileName = str(decode_header(fileName)[0][0])
-                fileName = fileName[2:-1]
+                # fileName = str(decode_header(fileName)[0][0])
+                # fileName = fileName[2:-1]
+                fileName = decode_multiple(fileName)
                 if bool(fileName) and type(fileName) is str:
                     filePath = os.path.join(detach_dir, 'attachments', fileName)
                     filePath = str(decode_header(filePath)[0][0])
+                    filePath.encode('utf-8')
                     if not os.path.isfile(filePath):
+                        print(filePath)
                         fp = open(filePath, 'wb')
                         fp.write(part.get_payload(decode=True))
                         fp.close()
+            print(str(msgId) + " and  " + str(frm))
             item = MailItem(str(msgId), str(frm), filePath)
             self.append_to_list(item)
 
@@ -164,19 +180,25 @@ class MailAgent:
             if it.getID() == id:
                 self.sendmail(it.getSender(), text, subj)
 
-#выполняемый код
-k = MailAgent()
-k.connect_imap()
-k.connect_smtp()
-#k.getmail()
-k.get_attachments()
-print("TEST AREA!!!!")
+# #выполняемый код
+# k = MailAgent()
+# k.connect_imap()
+# k.connect_smtp()
+# #k.getmail()
+# k.get_attachments()
+# print("TEST AREA!!!!")
 
-t = k.get_attachment_by_id("b'3'")
-print(t)
+# mailList = k.get_list()
+# for item in mailList:
+#     attachment = item.email_attachment
+#     print(attachment)
+#     k.answer_to_id_email(item.email_id, "nice one", "Answer")
 
-k.answer_to_id_email("b'3'", "LOOOOOOOOOOOOL", "TEST1")
-k.answer_to_id_email("b'3'", "LOOOOOOOOOOOOL", "TEST2")
-k.answer_to_id_email("b'3'", "LOOOOOOOOOOOOL", "TEST3")
+# # t = k.get_attachment_by_id("b'3'")
+# # print(t)
 
-M.logout()
+# # k.answer_to_id_email("b'4'", "LOOOOOOOOOOOOL", "TEST1")
+# # k.answer_to_id_email("b'4'", "LOOOOOOOOOOOOL", "TEST2")
+# # k.answer_to_id_email("b'4'", "LOOOOOOOOOOOOL", "TEST3")
+
+# M.logout()
