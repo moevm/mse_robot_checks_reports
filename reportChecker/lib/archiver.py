@@ -2,7 +2,6 @@
 from zipfile import*
 import codecs, sys
 import locale
-from zipworker.listSubjects import ListSubjects
 from zipworker.subject import Subject
 
 class Archiver:
@@ -16,7 +15,7 @@ class Archiver:
     __listSubjects=None
     __number=-1 #Номер в списке названия дисциплины, которую будет ождать программа, следуя из названия архива
 
-    def __init__(self,path_to_archieve):
+    def __init__(self,path_to_archieve, listSubjects):
         self.__path = path_to_archieve
         if is_zipfile(path_to_archieve):
             self.__zFile = ZipFile(path_to_archieve, 'r')
@@ -27,8 +26,7 @@ class Archiver:
                         self.__listNames.append(elem.encode('cp437').decode('cp866'))
                     except UnicodeEncodeError:
                         self.__listNames.append(elem)
-                #print(self.__listNames)
-                self.fillListSubjects() #заполняем БД
+        self.__listSubjects=listSubjects
 
     def getNameList(self):
         return self.__zFile.namelist()
@@ -46,6 +44,10 @@ class Archiver:
             return "Файл не принят.\n Неверное название архива."
         if(value == 5):
             return "Файл не принят.\n Название папки внутри архива и название архива должно быть одинаковым. Ожидалась папка с именем: " + self.__fileName
+        if(value ==404):
+            return "Не загружен список с предметами listSubject. Используйте метод setLislSubject(list)"
+
+
 
 
     def checkName(self, str):  # проверка названия файла  1 - когда название папки внури  архива (сюда же можно вставить проверку соответствует ли номер группе дисциплине)
@@ -77,21 +79,12 @@ class Archiver:
 
 
     def isRightSubject(self, name): #правильно ли названа дисциплина
-        for i in range(0, self.__listSubjects.getLenth()):
-            if(name==self.__listSubjects.getSubject(i).getName()):
-                self.__subject=self.__listSubjects.getSubject(i)    #получим объект с дисциплиной
+        for i in range(0, self.__listSubjects.__len__()):
+            if(name==self.__listSubjects[i].getName()):
+                self.__subject=self.__listSubjects[i]    #получим объект с дисциплиной
                 return True
             else:
                 return  False
-
-
-    def fillListSubjects(self): #заполняем базу данных
-        self.__listSubjects = ListSubjects()
-        self.__listSubjects.appendSubject(Subject("ПРОГ",1,3,3))
-        self.__listSubjects.appendSubject(Subject("ИНФ", 1, 2, 1))
-        self.__listSubjects.appendSubject(Subject("ВЫЧМАТ", 0, 3, 0))
-        self.__listSubjects.appendSubject(Subject("АЛГИСД", 0, 4, 0))
-        self.__listSubjects.appendSubject(Subject("ОРГЭВМ", 1, 2, 3))
 
     def finderNumSlash(self,str): # Возвращает количесвто слешей в строке до 3
         k=0
@@ -129,6 +122,8 @@ class Archiver:
 
     def check_archive(self):
 
+        if(self.__listSubjects==None):
+            return 404;
         if(self.__zFile==None):
             return 1 #Если это не zip архив
         if(self.__listNames==None):
