@@ -1,9 +1,10 @@
 
 from zipfile import*
-from zipworker.listSubjects import ListSubjects
+import codecs, sys
+import locale
 from zipworker.subject import Subject
 
-class Verifier:
+class Archiver:
     __path=""
     __subject=None #объект с дисциплиной
     __fileName=""
@@ -14,34 +15,55 @@ class Verifier:
     __listSubjects=None
     __number=-1 #Номер в списке названия дисциплины, которую будет ождать программа, следуя из названия архива
 
-    def __init__(self,path_to_archieve):
+    def __init__(self,path_to_archieve, listSubjects):
         self.__path = path_to_archieve
         if is_zipfile(path_to_archieve):
             self.__zFile = ZipFile(path_to_archieve, 'r')
-            templist=self.__getNameList()
+            templist=self.getNameList()
             if(templist!=None):
                 for elem in templist:
-                    self.__listNames.append(elem.encode('cp437').decode('cp866'))#Перекодируем из cp437 в utf-8
-                self.__fillListSubjects()
+                    try:
+                        self.__listNames.append(elem.encode('cp437').decode('cp866'))
+                    except UnicodeEncodeError:
+                        self.__listNames.append(elem)
+        self.__listSubjects=listSubjects
 
-    def __getNameList(self):
+    def getNameList(self):
         return self.__zFile.namelist()
 
+    def getInfoMessage(self,value):
+        if(value==0):
+            return "Файл принят."
+        if (value == 1):
+            return "Файл не принят.\n Архив должен быть zip архивом."
+        if (value == 2):
+            return "Файл не принят.\n Вы прислали пустой архив."
+        if (value == 3):
+            return self.__responseStr
+        if (value == 4):
+            return "Файл не принят.\n Неверное название архива."
+        if(value == 5):
+            return "Файл не принят.\n Название папки внутри архива и название архива должно быть одинаковым. Ожидалась папка с именем: " + self.__fileName
+        if(value ==404):
+            return "Не загружен список с предметами listSubject. Используйте метод setLislSubject(list)"
 
-    def __checkName(self, str):  # проверка названия файла  1 - когда название папки внури  архива
+
+
+
+    def checkName(self, str):  # проверка названия файла  1 - когда название папки внури  архива (сюда же можно вставить проверку соответствует ли номер группе дисциплине)
 
         listStr = str.split('-')
 
-        if (len(listStr) != 4 or not (listStr[0].isdigit()) or not self.__isRightSubject(listStr[1]) or not (
+        if (len(listStr) != 4 or not (listStr[0].isdigit()) or not self.isRightSubject(listStr[1]) or not (
         listStr[2].isalpha()) or not (listStr[2].isupper()) or not (listStr[3].split('.')[0].isalpha()) or not (
         listStr[3].split('.')[0].isupper())):
-            return self.printResponse(4) #Если название неверно
+            return 4 #Если название архива неверно
         else:
-            self.__fileName=str[0:len(str)-4] #если название файла верно
+            self.__fileName=str[0:len(str)-4] #если название папки внутри архива верно
             return  "$"
 
 
-    def __checkFileName(self):
+    def checkFileName(self):
         count = len(self.__path)-1 #Выделим имя файла из пути
         s=self.__path[count]
         strR=""
@@ -52,28 +74,19 @@ class Verifier:
         str=""
         for i in range(len(strR)-1,-1,-1):
             str+=strR[i]
-        return  self.__checkName(str)
+        return  self.checkName(str)
 
 
 
-    def __isRightSubject(self, name): #правильно ли названа дисциплина
-        for i in range(0, self.__listSubjects.getLenth()):
-            if(name==self.__listSubjects.getSubject(i).getName()):
-                self.__subject=self.__listSubjects.getSubject(i)    #получим объект с дисциплиной
+    def isRightSubject(self, name): #правильно ли названа дисциплина
+        for i in range(0, self.__listSubjects.__len__()):
+            if(name==self.__listSubjects[i].getName()):
+                self.__subject=self.__listSubjects[i]    #получим объект с дисциплиной
                 return True
             else:
                 return  False
 
-
-    def __fillListSubjects(self): #заполняем базу данных
-        self.__listSubjects = ListSubjects()
-        self.__listSubjects.appendSubject(Subject("ПРОГ",1,3,3))
-        self.__listSubjects.appendSubject(Subject("ИНФ", 1, 2, 1))
-        self.__listSubjects.appendSubject(Subject("ВЫЧМАТ", 0, 3, 0))
-        self.__listSubjects.appendSubject(Subject("АЛГИСД", 0, 4, 0))
-        self.__listSubjects.appendSubject(Subject("ОРГЭВМ", 1, 2, 3))
-
-    def __finderNumSlash(self,str): # Возвращает количесвто слешей в строке до 3
+    def finderNumSlash(self,str): # Возвращает количесвто слешей в строке до 3
         k=0
         for i in range(0, len(str)):
             if(str[i]=="/"):
@@ -83,7 +96,7 @@ class Verifier:
         return k
 
 
-    def __getTemplatesList(self): #получить список шаблонов
+    def getTemplatesList(self): #получить список шаблонов
         list=[]
         i=0
         for i in range(1,self.__subject.getNumLabWorks()+1):
@@ -98,7 +111,7 @@ class Verifier:
         return list
 
 
-    def __isAllFound(self, listFound): #все ли строки найдены
+    def isAllFound(self, listFound): #все ли строки найдены
         sum=0
         for x in listFound:
             sum = sum+x
@@ -107,44 +120,33 @@ class Verifier:
         else:
             return  False
 
-    def __printResponse(self, num):
-        if (num == 0):
-            return "Файл принят."
-        if (num == 1):
-            return "Файл не принят.\n Архив должен быть zip архивом."
-        if (num == 2):
-            return "Файл не принят.\n Вы прислали пустой архив."
-        if (num == 3):
-            return self.__responseStr
-        if (num == 4):
-            return "Файл не принят.\n Неверное название архива."
-        if(num == 5):
-            return "Файл не принят.\n Название папки внутри архива и название архива должно быть одинаковым. Ожидалась папка с именем: " + self.__fileName
+    def check_archive(self):
 
-    def verifydata(self):
-
+        if(self.__listSubjects==None):
+            return 404;
         if(self.__zFile==None):
-            return self.__printResponse(1) #Если это не zip архив
+            return 1 #Если это не zip архив
         if(self.__listNames==None):
-            return self.__printResponse(2) #Если архив пуст
-        resp = self.__checkFileName() #проверка на имя архива
+            return 2 #Если архив пуст
+        resp = self.checkFileName() #проверка на имя архива
         if(resp!="$"):
-            return resp
+            return resp #Если название архива неверно
         begin = self.__listNames[0]
         if(begin[len(begin)-1]=="/"):
             begin = begin[0:len(begin)-1]
         if(self.__fileName.find(begin)!=0):#проверка на имя папки
-            return self.printResponse(5)  #совпадает ли имя папки и архива
+            return 5  #Несовпадает ли имя папки и архива
 
         workingListNames=[]
         i=0
-        for str in self.__listNames:
-            if (self.__finderNumSlash(str) <3 and (str.find(".")==-1)): #проверяем количество слешей, чтобы выделить нужный нам путь вида XXXX-NAME-SUBJECT/ЛР_№/   И   проверяем наличие точек, чтобы отбросить путь вида XXXX-NAME-SUBJECT/ЛР_№/text.txt, являющий правильным
+        for str in self.__listNames: #Отбрасываем ненужные пути
+            if(self.finderNumSlash(str) < 3 and (str[len(str)-1]=="/")):
                 workingListNames.append(str)
-            if (self.__finderNumSlash(str)<2 and (str.find(".")!=-1)): #файлы не должны находиться вне файлов
+            if (self.finderNumSlash(str) < 2 and (str[len(str)-1]!="/")):
                 workingListNames.append(str)
+        print(workingListNames)
         workingListNames.remove(self.__fileName+"/")
-        listTamplates=self.__getTemplatesList() #получаем список шаблонов для поиска
+        listTamplates=self.getTemplatesList() #получаем список шаблонов для поиска
         listFound=[] #здесь будем помечаем найденные строки
         for i in range(len(listTamplates)):
             listFound.append(0)
@@ -156,27 +158,21 @@ class Verifier:
                     workingListNames.remove(path)
             j+=1
 
-        if(self.__isAllFound(listFound) and len(workingListNames)==0):
-            return self.__printResponse(0) #Файл принят
+        if(self.isAllFound(listFound) and len(workingListNames)==0):
+            return 0 #Файл принят
 
         if(len(workingListNames)!=0):
-            str1="В файле обнаружены лишние директории: \n"
+            str1="В архиве обнаружены лишние директории: \n"
             for elem in workingListNames:
                 str1+=elem+"\n"
             self.__responseStr += str1
 
-        if (not self.__isAllFound(listFound)):
+        if (not self.isAllFound(listFound)):
             k=0
-            str2 = "В файле отсутствуют необходимые директории: \n"
+            str2 = "В архиве отсутствуют необходимые директории: \n"
             for x in listFound:
                 if (x == 0):
                     str2 += listTamplates[k] + "\n"
                 k+=1
             self.__responseStr += str2
-        return self.__printResponse(3)
-
-    def verifyname(self,name):
-        if(name=="Файлы по дисциплине"):
-            return True
-        else:
-            return False
+        return 3 #Отсутсвуют директории
