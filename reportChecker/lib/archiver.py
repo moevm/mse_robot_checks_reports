@@ -1,5 +1,3 @@
-#! /usr/bin/env python
-# -*- coding: utf-8 -*-
 
 from zipfile import*
 import codecs, sys
@@ -178,3 +176,16 @@ class Archiver:
                 k+=1
             self.__responseStr += str2
         return 3 #Отсутсвуют директории
+
+
+
+
+
+
+
+
+
+
+
+
+
