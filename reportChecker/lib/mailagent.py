@@ -32,6 +32,15 @@ M = imaplib.IMAP4_SSL('imap.yandex.ru')
 detach_dir = '.'
 if 'attachments' not in os.listdir(detach_dir):
     os.mkdir('attachments')
+import re
+
+# Для декодирования аттачмента
+quopri_entry = re.compile(r'=\?[\w-]+\?[QB]\?[^?]+?\?=')
+
+def decode_multiple(encoded, _pattern=quopri_entry):
+    fixed = '\r\n'.join(_pattern.findall(encoded))
+    output = [b.decode(c) for b, c in decode_header(fixed)]
+    return ''.join(output)
 
 #парсит адрес отправителя (отделяет сам адрес от строки где адрес и имя, так его возвращает header)
 def parseFrom(sender):
@@ -51,11 +60,12 @@ class MailItem:
     email_id = ''
     email_sender = ''
     email_attachment = ''
-
-    def __init__(self, id, email, attach):
+    email_time = ''
+    def __init__(self, id, email, time, attach):
         self.email_id =  id
         self.email_sender = parseFrom(email)
         self.email_attachment = attach
+        self.email_time = time
         pass
 
     def getID(self):
@@ -67,18 +77,32 @@ class MailItem:
     def getAttachment(self):
         return self.email_attachment
 
+    def getTime(self):
+        return self.email_time
+
 
 class MailAgent:
     """Work with mail"""
+    __username = ''
+    __password = ''
     __list = []
 
-    def __init__(self):
+    def __init__(self, username, password):
+        self.__username = username
+        self.__password = password
         pass
+
+
+    def get_username(self):
+        return self.__username
+
+    def get_password(self):
+        return self.__password
 
     #подключение по imap
     def connect_imap(self):
         try:
-            rv, data = M.login(YA_USER, YA_PASSWORD)
+            rv, data = M.login(self.__username, self.__password)
         except imaplib.IMAP4.error:
             print("LOGIN FAILED!!! ")
             sys.exit(1)
@@ -88,16 +112,16 @@ class MailAgent:
         s.ehlo()
         s.starttls()
         s.ehlo()
-        s.login(user_name, user_passwd)
+        s.login(self.__username, self.__password)
 
     #отправить письмо по адресу reciever c текстом text и темой письма subj (требуется предварительный вызов ф-ии connect_smtp())
     def sendmail(self, reciever, text = 'Wrong report', subj = 'From moevm (report error)'):
         msg = MIMEText(text, "", "utf-8")
         msg['Subject'] = subj
-        msg['From'] = me
+        msg['From'] = self.__username
         msg['To'] = reciever
 
-        s.sendmail(me, reciever, msg.as_string())
+        s.sendmail(self.__username, reciever, msg.as_string())
         return True
 
     #получает вложения ВСЕХ писем (можно изменить на входящие изменив ALL на INBOX)
@@ -106,11 +130,11 @@ class MailAgent:
         rv, mailboxes = M.list()
         if rv == 'OK':
             print("List loaded.\n")
-        rv, data = M.select()
+        rv, data = M.select('INBOX')
         if rv == 'OK':
             print("Mailbox selected.\n")
 
-        rv, data = M.search(None, "ALL")
+        rv, data = M.search(None, "RECENT")
         attachMass = []
         filePath =''
         for msgId in data[0].split():
@@ -122,6 +146,7 @@ class MailAgent:
             emailBody = messageParts[0][1]
             mail = email.message_from_bytes(emailBody)
             frm = email.header.make_header(email.header.decode_header(mail['From']))
+			
             for part in mail.walk():
                 if part.get_content_maintype() == 'multipart':
                     # print part.as_string()
@@ -131,7 +156,6 @@ class MailAgent:
                     continue
                 fileName = part.get_filename()
                 fileName = str(decode_header(fileName)[0][0])
-                fileName = fileName[2:-1]
                 if bool(fileName) and type(fileName) is str:
                     filePath = os.path.join(detach_dir, 'attachments', fileName)
                     filePath = str(decode_header(filePath)[0][0])
@@ -139,7 +163,7 @@ class MailAgent:
                         fp = open(filePath, 'wb')
                         fp.write(part.get_payload(decode=True))
                         fp.close()
-            item = MailItem(str(msgId), str(frm), filePath)
+            item = MailItem(str(msgId), str(frm),str(mail['Date']), filePath)
             self.append_to_list(item)
 
     #добавляет в лист
@@ -165,18 +189,23 @@ class MailAgent:
                 self.sendmail(it.getSender(), text, subj)
 
 #выполняемый код
-k = MailAgent()
+k = MailAgent(YA_USER, YA_PASSWORD)
 k.connect_imap()
 k.connect_smtp()
 #k.getmail()
-k.get_attachments()
-print("TEST AREA!!!!")
+#k.get_attachments()
+#print("TEST AREA!!!!")
+#mailList = k.get_list()
+#for item in mailList:
+ #   attachment = item.email_attachment
+ #   print(attachment)
+ #   k.answer_to_id_email(item.email_id, "nice one", "Answer")
 
-t = k.get_attachment_by_id("b'3'")
-print(t)
+# t = k.get_attachment_by_id("b'3'")
+# print(t)
 
-k.answer_to_id_email("b'3'", "LOOOOOOOOOOOOL", "TEST1")
-k.answer_to_id_email("b'3'", "LOOOOOOOOOOOOL", "TEST2")
-k.answer_to_id_email("b'3'", "LOOOOOOOOOOOOL", "TEST3")
+# k.answer_to_id_email("b'4'", "LOOOOOOOOOOOOL", "TEST1")
+# k.answer_to_id_email("b'4'", "LOOOOOOOOOOOOL", "TEST2")
+# k.answer_to_id_email("b'4'", "LOOOOOOOOOOOOL", "TEST3")
 
 M.logout()
