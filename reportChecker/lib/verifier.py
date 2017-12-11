@@ -1,23 +1,25 @@
-#! /usr/bin/env python
+ #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
 from zipfile import*
 import codecs, sys
 import locale
-from zipworker.subject import Subject
+from subject import Subject
 
 class Archiver:
     __path=""
+    __listTuples=[]
     __subject=None #объект с дисциплиной
     __fileName=""
     __zFile=None
     __listNames=[]
+    __groupNum=None
     __count = 0
     __responseStr="Файл не принят.\n"
     __listSubjects=None
     __number=-1 #Номер в списке названия дисциплины, которую будет ождать программа, следуя из названия архива
 
-    def __init__(self,path_to_archieve, listSubjects):
+    def __init__(self,path_to_archieve, listTuples):
         self.__path = path_to_archieve
         if is_zipfile(path_to_archieve):
             self.__zFile = ZipFile(path_to_archieve, 'r')
@@ -28,7 +30,8 @@ class Archiver:
                         self.__listNames.append(elem.encode('cp437').decode('cp866'))
                     except UnicodeEncodeError:
                         self.__listNames.append(elem)
-        self.__listSubjects=listSubjects
+        self.__listTuples = listTuples
+        #self.__listSubjects=listSubjects
 
     def getNameList(self):
         return self.__zFile.namelist()
@@ -37,33 +40,49 @@ class Archiver:
         if(value==0):
             return "Файл принят."
         if (value == 1):
-            return "Файл не принят.\n Архив должен быть zip архивом."
+            return "Файл не принят.\nАрхив должен быть zip архивом."
         if (value == 2):
-            return "Файл не принят.\n Вы прислали пустой архив."
+            return "Файл не принят.\nВы прислали пустой архив."
         if (value == 3):
             return self.__responseStr
         if (value == 4):
-            return "Файл не принят.\n Неверное название архива."
+            return "Файл не принят.\nНеверное название архива."
         if(value == 5):
-            return "Файл не принят.\n Название папки внутри архива и название архива должно быть одинаковым. Ожидалась папка с именем: " + self.__fileName
+            return "Файл не принят.\nНазвание папки внутри архива и название архива должно быть одинаковым. Ожидалась папка с именем: " + self.__fileName + "."
+        if(value == 6):
+            return "Файл не принят.\nГруппы с таким номером не существует."
+        if(value == 7):
+            return "Файл не принят.\nУ группы "+ self.__groupNum + " отсутсвует данная дисциплина."
         if(value ==404):
-            return "Не загружен список с предметами listSubject. Используйте метод setLislSubject(list)"
+            return "Не загружен список с предметами listSubject."
 
 
-
-
-    def checkName(self, str):  # проверка названия файла  1 - когда название папки внури  архива (сюда же можно вставить проверку соответствует ли номер группе дисциплине)
+    def checkName(self, str):  # проверка названия файла
 
         listStr = str.split('-')
-
+        if(listStr[0].isdigit()):
+            self.__groupNum=listStr[0]
+            self.setListSubjects(listStr[0]) #Загрузим список предметов
+            if(self.__listSubjects==None):
+                return 6
+        else:
+            return 4
+        if(not self.isRightSubject(listStr[1])):
+            return 7
         if (len(listStr) != 4 or not (listStr[0].isdigit()) or not self.isRightSubject(listStr[1]) or not (
         listStr[2].isalpha()) or not (listStr[2].isupper()) or not (listStr[3].split('.')[0].isalpha()) or not (
         listStr[3].split('.')[0].isupper())):
             return 4 #Если название архива неверно
         else:
             self.__fileName=str[0:len(str)-4] #если название папки внутри архива верно
-            return  "$"
+            return "$"
 
+    def setListSubjects(self,numGroup): #Устанавливаем список дисциплин для данной группы
+        for index in range(0,len(self.__listTuples)):
+            currTuple = self.__listTuples[index]
+            group, listsubjects = currTuple
+            if(numGroup==group):
+                self.__listSubjects = listsubjects
 
     def checkFileName(self):
         count = len(self.__path)-1 #Выделим имя файла из пути
@@ -81,12 +100,11 @@ class Archiver:
 
 
     def isRightSubject(self, name): #правильно ли названа дисциплина
-        for i in range(0, self.__listSubjects.__len__()):
-            if(name==self.__listSubjects[i].getName()):
-                self.__subject=self.__listSubjects[i]    #получим объект с дисциплиной
+        for k in range(0, len(self.__listSubjects)):
+            if(name==self.__listSubjects[k].getName()):
+                self.__subject=self.__listSubjects[k]    #получим объект с дисциплиной
                 return True
-            else:
-                return  False
+        return False
 
     def finderNumSlash(self,str): # Возвращает количесвто слешей в строке до 3
         k=0
@@ -124,8 +142,6 @@ class Archiver:
 
     def check_archive(self):
 
-        if(self.__listSubjects==None):
-            return 404;
         if(self.__zFile==None):
             return 1 #Если это не zip архив
         if(self.__listNames==None):
