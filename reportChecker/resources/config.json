@@ -1,16 +1,42 @@
 {
-  "disciplines": [
+  "authentication": {
+    "email": "vasya@odnoklasniki.ml",
+    "password": "imya_dochki_123"
+  },
+  "groups": [
     {
-      "name": "ПРОГ",
-      "course_works": 1,
-      "labs": 2,
-      "ind_tasks": 4
+      "group_number": 5303,
+      "disciplines": [
+        {
+          "name": "ПРОГ",
+          "course_works": 1,
+          "labs": 2,
+          "ind_tasks": 7
+        },
+        {
+          "name": "БД",
+          "course_works": 1,
+          "labs": 2,
+          "ind_tasks": 5
+        }
+      ]
     },
     {
-      "name": "БД",
-      "course_works": 1,
-      "labs": 2,
-      "ind_tasks": 4
+      "group_number": 5304,
+      "disciplines": [
+        {
+          "name": "ПРОГ",
+          "course_works": 1,
+          "labs": 2,
+          "ind_tasks": 4
+        },
+        {
+          "name": "БД",
+          "course_works": 1,
+          "labs": 2,
+          "ind_tasks": 4
+        }
+      ]
     }
   ]
 }
