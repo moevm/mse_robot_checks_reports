@@ -18,7 +18,7 @@ class DatabaseDAO:
         self.db = self.client.verificated_docs
         self.collection = self.db.docs
 
-    def saveDoc(self, name, discipline, filename):
+    def saveDoc(self, name, discipline, filename, date):
         skelet = {}
         skelet.update({"name":name})
         skelet.update({"discipline":discipline})
@@ -29,7 +29,7 @@ class DatabaseDAO:
         fileId = fs.put(file.read())
         skelet.update({"fileId":fileId})
 
-        skelet.update({"date_and_time":datetime.datetime.now()})
+        skelet.update({"date_and_time":date})
 
         self.collection.insert_one(skelet)
 
