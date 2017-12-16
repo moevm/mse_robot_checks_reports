@@ -2,7 +2,8 @@
 from zipfile import*
 import codecs, sys
 import locale
-from zipworker.subject import Subject
+import lib.subject
+import os
 
 class Archiver:
     __path=""
@@ -63,28 +64,30 @@ class Archiver:
             return  "$"
 
 
-    def checkFileName(self):
-        count = len(self.__path)-1 #Выделим имя файла из пути
-        s=self.__path[count]
-        strR=""
-        while(s!="/" and count > -1 ):
-            strR+=s
-            count-=1
-            s=self.__path[count]
-        str=""
-        for i in range(len(strR)-1,-1,-1):
-            str+=strR[i]
-        return  self.checkName(str)
+    def checkFileName(self):        
+        # count = len(self.__path)-1 #Выделим имя файла из пути
+        # s=self.__path[count]
+        # strR=""
+        # while(s!="/" and count > -1 ):
+        #     strR+=s
+        #     count-=1
+        #     s=self.__path[count]
+        # str=""
+        # for i in range(len(strR)-1,-1,-1):
+        #     str+=strR[i]
+
+        #так полегче будет
+        filename = os.path.basename(self.__path)
+        return  self.checkName(filename)
 
 
 
     def isRightSubject(self, name): #правильно ли названа дисциплина
-        for i in range(0, self.__listSubjects.__len__()):
-            if(name==self.__listSubjects[i].getName()):
-                self.__subject=self.__listSubjects[i]    #получим объект с дисциплиной
+        for disc in self.__listSubjects:
+            if(name==disc.getName()):
+                self.__subject=disc    #получим объект с дисциплиной
                 return True
-            else:
-                return  False
+        return False
 
     def finderNumSlash(self,str): # Возвращает количесвто слешей в строке до 3
         k=0
