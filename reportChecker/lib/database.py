@@ -3,6 +3,7 @@
 
 from pymongo import MongoClient
 from bson import ObjectId
+import datetime
 import os
 import gridfs
 import codecs
@@ -27,6 +28,9 @@ class DatabaseDAO:
         file = open(filename, "rb") #codecs #,encoding='utf-8', errors='strict'
         fileId = fs.put(file.read())
         skelet.update({"fileId":fileId})
+
+        skelet.update({"date_and_time":datetime.datetime.now()})
+
         self.collection.insert_one(skelet)
 
 # dbdao = DatabaseDAO()
