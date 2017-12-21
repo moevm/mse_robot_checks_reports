@@ -4,23 +4,31 @@
 from zipfile import*
 import codecs, sys
 import locale
-from subject import Subject
+from lib.subject import Subject
+import os
 
 class Archiver:
-    __path=""
-    __listTuples=[]
-    __subject=None #объект с дисциплиной
-    __fileName=""
-    __zFile=None
-    __listNames=[]
-    __groupNum=None
-    __count = 0
+    #__path=""
+    #__listTuples=[]
+    #__subject=None #объект с дисциплиной
+    #__fileName=""
+    #__zFile=None
+    #__listNames=[]
+    #__groupNum=None
+    #__count = 0
     __responseStr="Файл не принят.\n"
-    __listSubjects=None
+    #__listSubjects=None
     __number=-1 #Номер в списке названия дисциплины, которую будет ождать программа, следуя из названия архива
 
     def __init__(self,path_to_archieve, listTuples):
         self.__path = path_to_archieve
+        self.__listNames=[]
+        self.__listTuples = listTuples
+        self.filename = os.path.basename(self.__path)
+        self.__listSubjects=None
+        self.__subject=None
+        self.__groupNum=None
+        self.__count = 0
         if is_zipfile(path_to_archieve):
             self.__zFile = ZipFile(path_to_archieve, 'r')
             templist=self.getNameList()
@@ -30,8 +38,6 @@ class Archiver:
                         self.__listNames.append(elem.encode('cp437').decode('cp866'))
                     except UnicodeEncodeError:
                         self.__listNames.append(elem)
-        self.__listTuples = listTuples
-        #self.__listSubjects=listSubjects
 
     def getNameList(self):
         return self.__zFile.namelist()
@@ -81,21 +87,22 @@ class Archiver:
         for index in range(0,len(self.__listTuples)):
             currTuple = self.__listTuples[index]
             group, listsubjects = currTuple
-            if(numGroup==group):
+            if(numGroup==str(group)):
                 self.__listSubjects = listsubjects
 
     def checkFileName(self):
-        count = len(self.__path)-1 #Выделим имя файла из пути
-        s=self.__path[count]
-        strR=""
-        while(s!="/" and count > -1 ):
-            strR+=s
-            count-=1
-            s=self.__path[count]
-        str=""
-        for i in range(len(strR)-1,-1,-1):
-            str+=strR[i]
-        return  self.checkName(str)
+        # count = len(self.__path)-1 #Выделим имя файла из пути
+        # s=self.__path[count]
+        # strR=""
+        # while(s!="/" and count > -1 ):
+        #     strR+=s
+        #     count-=1
+        #     s=self.__path[count]
+        # str=""
+        # for i in range(len(strR)-1,-1,-1):
+        #     str+=strR[i]
+        filename = os.path.basename(self.__path)
+        return  self.checkName(filename)
 
 
 
@@ -148,11 +155,11 @@ class Archiver:
             return 2 #Если архив пуст
         resp = self.checkFileName() #проверка на имя архива
         if(resp!="$"):
-            return resp #Если название архива неверно
+            return resp #Если название архива неверно        
         begin = self.__listNames[0]
         if(begin[len(begin)-1]=="/"):
             begin = begin[0:len(begin)-1]
-        if(self.__fileName.find(begin)!=0):#проверка на имя папки
+        if(self.__fileName.find(begin)==-1):#проверка на имя папки
             return 5  #Несовпадает ли имя папки и архива
 
         workingListNames=[]
@@ -162,7 +169,7 @@ class Archiver:
                 workingListNames.append(str)
             if (self.finderNumSlash(str) < 2 and (str[len(str)-1]!="/")):
                 workingListNames.append(str)
-        print(workingListNames)
+        #print(workingListNames)
         workingListNames.remove(self.__fileName+"/")
         listTamplates=self.getTemplatesList() #получаем список шаблонов для поиска
         listFound=[] #здесь будем помечаем найденные строки
@@ -179,11 +186,11 @@ class Archiver:
         if(self.isAllFound(listFound) and len(workingListNames)==0):
             return 0 #Файл принят
 
-        if(len(workingListNames)!=0):
-            str1="В архиве обнаружены лишние директории: \n"
-            for elem in workingListNames:
-                str1+=elem+"\n"
-            self.__responseStr += str1
+        # if(len(workingListNames)!=0):
+        #     str1="В архиве обнаружены лишние директории: \n"
+        #     for elem in workingListNames:
+        #         str1+=elem+"\n"
+        #     self.__responseStr += str1
 
         if (not self.isAllFound(listFound)):
             k=0

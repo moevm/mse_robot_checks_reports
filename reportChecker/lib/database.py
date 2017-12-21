@@ -24,7 +24,7 @@ class DatabaseDAO:
         skelet.update({"discipline":discipline})
         
         fs = gridfs.GridFS(self.db, collection="arch")
-        print("FILEPATH: " + filename)
+        #print("FILEPATH: " + filename)
         file = open(filename, "rb") #codecs #,encoding='utf-8', errors='strict'
         fileId = fs.put(file.read())
         skelet.update({"fileId":fileId})

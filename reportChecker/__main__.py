@@ -4,7 +4,7 @@ import json
 #sys.path.append(os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))))
 
 from lib.mailagent import MailAgent
-from lib.archiver import Archiver
+from lib.verifier import Archiver
 from lib.database import DatabaseDAO
 from lib.config import ConfigReader
 from lib.subject import Subject
@@ -12,50 +12,51 @@ from pymongo import MongoClient
 
 def run_project(args):
     os.chdir(os.path.dirname(__file__))
-    print(os.getcwd())
+    #print(os.getcwd())
 
     #reading config    
     config = ConfigReader(os.path.abspath("resources/config.json"))
-    json_string = config.read_configs()    
-    jsonObj = json.loads(json_string)
-
+    config.read_configs()    
+    # jsonObj = json.loads(json_string)
     #debug info:
-    print(json_string)
+    #print(json_string)
+
+    #mail info
+    address = config.get_email_address()
+    password = config.get_email_password()
 
     #subject info from config
-    subjects_list = []
-    for disc in jsonObj.get("disciplines"):
-        disciplineToAdd = Subject(disc.get("name"), \
-            disc.get("course_works"), disc.get("labs"),\
-            disc.get("ind_tasks"))
-        subjects_list.append(disciplineToAdd)       
+    groups = config.get_groups()
+    discInfoList = []
+    
+    for group in groups:
+        disciplines = config.get_disciplines_for_group(group)
+        subjList = []
+        for disc in disciplines:
+            subject = Subject(disc.get("name"),disc.get("course_works"),disc.get("labs"), disc.get("ind_tasks"))
+            subjList.append(subject)
+        _tuple = (group,subjList)
+        discInfoList.append(_tuple)
 
     #db
     dbdao = DatabaseDAO()
 
     #mail agent
-    k = MailAgent()
+    k = MailAgent(address,password)
     k.connect_imap()
     k.connect_smtp()
     k.get_attachments()
-
     mailList = k.get_list()
+
     for item in mailList:
         attachment = item.email_attachment
-
-        #debug info
-        print(attachment)
-
-        archiver = Archiver(attachment,subjects_list)
+        archiver = Archiver(attachment,discInfoList)
         result = archiver.check_archive()
-
-        #debug info
-        print(result)
 
         #save to DB if attachment verified
         if (result == 0):
             discName = os.path.basename(attachment).split('-')[1]
-            dbdao.saveDoc(item.email_sender, discName, os.path.abspath(attachment))
+            dbdao.saveDoc(item.email_sender, discName, os.path.abspath(attachment), item.email_time)
         
         resultMsg = archiver.getInfoMessage(result)
 
