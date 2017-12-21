@@ -8,16 +8,7 @@ from lib.subject import Subject
 import os
 
 class Archiver:
-    #__path=""
-    #__listTuples=[]
-    #__subject=None #объект с дисциплиной
-    #__fileName=""
-    #__zFile=None
-    #__listNames=[]
-    #__groupNum=None
-    #__count = 0
     __responseStr="Файл не принят.\n"
-    #__listSubjects=None
     __number=-1 #Номер в списке названия дисциплины, которую будет ождать программа, следуя из названия архива
 
     def __init__(self,path_to_archieve, listTuples):
@@ -91,16 +82,6 @@ class Archiver:
                 self.__listSubjects = listsubjects
 
     def checkFileName(self):
-        # count = len(self.__path)-1 #Выделим имя файла из пути
-        # s=self.__path[count]
-        # strR=""
-        # while(s!="/" and count > -1 ):
-        #     strR+=s
-        #     count-=1
-        #     s=self.__path[count]
-        # str=""
-        # for i in range(len(strR)-1,-1,-1):
-        #     str+=strR[i]
         filename = os.path.basename(self.__path)
         return  self.checkName(filename)
 

@@ -1,8 +1,5 @@
 import sys, inspect, os
 import json
-
-#sys.path.append(os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))))
-
 from lib.mailagent import MailAgent
 from lib.verifier import Archiver
 from lib.database import DatabaseDAO
@@ -12,14 +9,10 @@ from pymongo import MongoClient
 
 def run_project(args):
     os.chdir(os.path.dirname(__file__))
-    #print(os.getcwd())
 
     #reading config    
     config = ConfigReader(os.path.abspath("resources/config.json"))
     config.read_configs()    
-    # jsonObj = json.loads(json_string)
-    #debug info:
-    #print(json_string)
 
     #mail info
     address = config.get_email_address()
@@ -65,16 +58,6 @@ def run_project(args):
 
         #send email
         k.answer_to_id_email(item.email_id, resultMsg, "Результат проверки")
-
-    #debug info - print db items
-    # cclient = MongoClient()
-    # cdb = cclient.verificated_docs
-    # ccollection = cdb.docs
-
-    # print(ccollection.find())
-    # print(ccollection.find().count())
-    # for doc in ccollection.find():
-    #     print(doc)    
 
     print('All done')
 
