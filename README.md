@@ -80,13 +80,18 @@ reportChecker/resources/config.json
 ## Запуск
 
 ```
-./run.sh
+./runReportChecker
 ```
 
+## Настройка демона для регулярного запуска
 
+Добавьте скрипт в `/etc/cron.hourly` для запуска каждый час:
 
+```
+#!/bin/bash
 
-
+sh ./path/to/runReportChecker
+```
 
 
 
