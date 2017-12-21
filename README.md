@@ -11,6 +11,12 @@
 
 [:link: Get here!](https://www.mongodb.com/)
 
+## :warning: Установка
+
+```
+git clone git@github.com:moevm/mse_robot_checks_reports.git
+```
+
 ## :warning: Установка зависимостей
 
 ```
